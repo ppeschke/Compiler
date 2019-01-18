@@ -1,16 +1,12 @@
-from Interpreter import Interpreter
+from Lexer import *
+from Parser import Parser
 
 def main():
-	while True:
-		try:
-			text = raw_input('calc>')
-		except EOFError:
-			break
-		if not text:
-			continue
-		interpreter = Interpreter(text)
-		result = interpreter.expr()
-		print(result)
+	text = open('test.txt', 'r').read()
+	if text:
+		lexer = Lexer(text)
+		parser = Parser(lexer)
+		parser.program()
 
 if __name__ == '__main__':
 	main()
