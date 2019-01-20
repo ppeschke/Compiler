@@ -12,6 +12,8 @@ LBRACKET = 'LBRACKET'
 RBRACKET = 'RBRACKET'
 LPARENT = 'LPARENT'
 RPARENT = 'RPARENT'
+LBRACE = 'LBRACE'
+RBRACE = 'RBRACE'
 LOOP = 'LOOP'
 IF = 'IF'
 ELSE = 'ELSE'
@@ -20,14 +22,16 @@ ASSIGN = 'ASSIGN'
 SEMICOLON = 'SEMICOLON'
 INCREMENTOR = 'INCREMENTOR'
 DECREMENTOR = 'DECREMENTOR'
-CONDITIONALAND = 'CONITIONALAND'
-CONDITIONALOR = 'CONDITIONALOR'
+CONDITIONALCOMBINATOR = 'CONDITIONALCOMBINATOR'
+CONDITIONALOP = 'CONDITIONALOP'
+NEGATOR = 'NEGATOR'
 
 RESERVED_WORDS = {
-	'declare': Token(DECLARE, 'declare'),
-	'while': Token(LOOP, 'while'),
-	'if': Token(IF, 'if'),
-	'else': Token(ELSE, 'else')
+	'declare': DECLARE,
+	'while' : LOOP,
+	'if': IF,
+	'else': ELSE,
+	'output': OUTPUT
 }
 
 class Lexer:
@@ -35,10 +39,18 @@ class Lexer:
 		self.text = text
 		self.pos = 0
 		self.current_char = self.text[self.pos]
-		self.reserved_words = ['while', 'if', 'else', 'declare']
+		self.line = 1
+		self.reserved_words = ['while', 'if', 'else', 'declare', 'output']
 
 	def error(self):
 		raise Exception('Error lexing input')
+
+	def peek(self):
+		peek_pos = self.pos + 1
+		if peek_pos > len(self.text) - 1:
+			return None
+		else:
+			return self.text[peek_pos]
 
 	def advance(self):
 		self.pos += 1
@@ -49,6 +61,8 @@ class Lexer:
 		
 	def skip_whitespace(self):
 		while self.current_char is not None and self.current_char.isspace():
+			if self.current_char == '\n':
+				self.line += 1
 			self.advance()
 
 	def integer(self):
@@ -71,43 +85,108 @@ class Lexer:
 				self.skip_whitespace()
 
 			if self.current_char.isdigit():
-				return Token(INTEGER, self.integer())
+				return Token(INTEGER, self.integer(), self.line)
 
 			if self.current_char.isalpha():
 				word = self.word()
 				if word in self.reserved_words:
-					return RESERVED_WORDS.get(word, Token(IDENTIFIER, word))
+					t = Token(IDENTIFIER, word, self.line)
+					r = RESERVED_WORDS.get(word, t)
+					if r == t:
+						return t;
+					else:
+						return Token(r, word, self.line)
 				else:
-					return Token(IDENTIFIER, word)
+					t = Token(IDENTIFIER, word, self.line)
+					return t
+
+			if self.current_char == '=':
+				if self.peek() == '=':
+					self.advance()
+					self.advance()
+					return Token(CONDITIONALOP, '==')
+				else:
+					self.advance()
+					return Token(ASSIGN, '=', self.line)
 			
+			if self.current_char == '<' or self.current_char == '>':
+				if(self.peek() == '='):
+					c = self.current_char
+					self.advance()
+					self.advance()
+					return Token(CONDITIONALOP, c + '=', self.line)
+				else:
+					c = self.current_char
+					self.advance()
+					return Token(CONDITIONALOP, c, self.line)
+			
+			if self.current_char == '!':
+				if(self.peek() == '='):
+					self.advance()
+					self.advance()
+					return Token(CONDITIONALOP, '!=', self.line)
+				else:
+					self.advance()
+					return Token(NEGATOR, '!', self.line)
+
 			if self.current_char == '+':
+				if self.peek() == '+':
+					self.advance()
+					self.advance()
+					return Token(INCREMENTOR, '++', self.line)
 				self.advance()
-				return Token(PLUS, '+')
+				return Token(PLUS, '+', self.line)
 			
 			if self.current_char == '-':
+				if self.peek() == '-':
+					self.advance()
+					self.advance()
+					return Token(DECREMENTOR, '--', self.line)
 				self.advance()
-				return Token(MINUS, '-')
+				return Token(MINUS, '-', self.line)
 			
 			if self.current_char == '/':
 				self.advance()
-				return Token(DIV, '/')
+				return Token(DIV, '/', self.line)
 			
 			if self.current_char == '*':
 				self.advance()
-				return Token(MUL, '*')
+				return Token(MUL, '*', self.line)
 			
 			if self.current_char == '%':
 				self.advance()
-				return Token(MOD, '%')
+				return Token(MOD, '%', self.line)
 			
 			if self.current_char == ';':
 				self.advance()
-				return Token(SEMICOLON, ';')
+				return Token(SEMICOLON, ';', self.line)
 			
-			if self.current_char == '=':
+			if self.current_char == '&' and self.peek() == '&':
 				self.advance()
-				return Token(ASSIGN, '=')
+				self.advance()
+				return Token(CONDITIONALCOMBINATOR, '&&', self.line)
+			
+			if self.current_char == '|' and self.peek() == '|':
+				self.advance()
+				self.advance()
+				return Token(CONDITIONALCOMBINATOR, '||', self.line)
 		
+			if self.current_char == '[':
+				self.advance()
+				return Token(LBRACKET, '[')
+			
+			if self.current_char == ']':
+				self.advance()
+				return Token(RBRACKET, ']')
+			
+			if self.current_char == '{':
+				self.advance()
+				return Token(LBRACE, '{')
+			
+			if self.current_char == '}':
+				self.advance()
+				return Token(RBRACE, '}')
+
 			self.error()
 		
-		return Token(EOF, None)
+		return Token(EOF, None, self.line)
