@@ -51,19 +51,75 @@ class Interpreter(NodeVisitor):
 			self.visit(child)
 	
 	def visit_Assign(self, node):
-		var_name = node.left.value
+		var_name = node.left.var_name
 		value = self.visit(node.right)
 		self.symtab.assign(var_name, value)
 
 	def visit_Declarative(self, node):
-		var_name = node.var.value
-		self.symtab.declare(var_name)
+		self.symtab.declare(node.var.var_name)
 		if node.assigned is not None:
 			self.visit(node.assigned)
 	
 	def visit_Var(self, node):
-		return self.symtab.lookup(node.token.value)
+		return self.symtab.lookup(node.var_name)
 
 	def visit_Output(self, node):
 		value = self.visit(node.expr)
 		print(value)
+	
+	def visit_PlusEquals(self, node):
+		var_name = node.left.var_name
+		value = self.symtab.lookup(var_name) + self.visit(node.right)
+		self.symtab.assign(var_name, value)
+	
+	def visit_MinusEquals(self, node):
+		var_name = node.left.var_name
+		value = self.symtab.lookup(var_name) - self.visit(node.right)
+		self.symtab.assign(var_name, value)
+
+	def visit_DivEquals(self, node):
+		var_name = node.left.var_name
+		value = self.symtab.lookup(var_name) // self.visit(node.right)
+		self.symtab.assign(var_name, value)
+	
+	def visit_MulEquals(self, node):
+		var_name = node.left.var_name
+		value = self.symtab.lookup(var_name) * self.visit(node.right)
+		self.symtab.assign(var_name, value)
+
+	def visit_ModEquals(self, node):
+		var_name = node.left.var_name
+		value = self.symtab.lookup(var_name) % self.visit(node.right)
+		self.symtab.assign(var_name, value)
+	
+	def visit_Loop(self, node):
+		while self.visit(node.condition):
+			self.visit(node.body)
+	
+	def visit_Body(self, node):
+		for c in node.children:
+			self.visit(c)
+	
+	def visit_LessThan(self, node):
+		return self.visit(node.left) < self.visit(node.right)
+	
+	def visit_LessThanEqual(self, node):
+		return self.visit(node.left) <= self.visit(node.right)
+
+	def visit_GreaterThan(self, node):
+		return self.visit(node.left) > self.visit(node.right)
+	
+	def visit_GreaterThanEqual(self, node):
+		return self.visit(node.left) >= self.visit(node.right)
+	
+	def visit_EqualTo(self, node):
+		return self.visit(node.left) == self.visit(node.right)
+	
+	def visit_NotEqualTo(self, node):
+		return self.visit(node.left) != self.visit(node.right)
+	
+	def visit_If(self, node):
+		if self.visit(node.condition):
+			self.visit(node.body)
+		elif node.else_node is not None:
+			self.visit(node.else_node)

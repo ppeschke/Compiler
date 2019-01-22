@@ -37,6 +37,7 @@ class Parser:
 	def doif(self):
 		#if             : IF LPARENT condition RPARENT body else*
 		token = self.current_token
+		self.eat(IF)
 		self.eat(LPARENT)
 		cond = self.condition()
 		self.eat(RPARENT)
@@ -44,39 +45,55 @@ class Parser:
 		else_node = None
 		if self.current_token.type == ELSE:
 			else_node = self.doelse()
-		return If(cond, bod, else_node)
+		return If(token, cond, bod, else_node)
 
 
 	def body(self):
 		#body           : (LBRACE statement(statement)* RBRACE | statement )
 		if self.current_token.type == LBRACE:
 			self.eat(LBRACE)
+			bod = Compound()
 			while self.current_token.type != RBRACE:
-				self.statement()
-				self.eat(RBRACE)
+				bod.children.append(self.statement())
+			self.eat(RBRACE)
+			return bod
 		else:
-			self.statement()
+			return self.statement()
 
 	def evaloperator(self):
 		#evaloperator   : (<|>|<=|>=|==|!=)
+		token = self.current_token
 		self.eat(EVALOPERATOR)
-		return 
+		return token
 
 	def condition(self):
-		#condition      : LPARENT condition RPARENT | factor | factor evaloperator factor | condition (AND | OR) condition
+		#condition      : LPARENT condition RPARENT | expression | expression evaloperator expression | condition (AND | OR) condition
 		if self.current_token.type == LPARENT:
 			self.eat(LPARENT)
 			cond = self.condition()
 			self.eat(RPARENT)
 		else:	#simple condition
-			left = self.factor()
+			left = self.expression()
 			if self.current_token.type == RPARENT or self.current_token.type == CONDITIONALCOMBINATOR:
-				op = Token(EVALOPERATOR, '==')
-				right = Token(INTEGER, 0)
+				op = Token(EVALOPERATOR, '!=')
+				right = Num(Token(INTEGER, 0))
 			else:
 				op = self.evaloperator()
-				right = self.factor()
-			cond = Condition(left, op, right)
+				right = self.expression()
+				if op.value == '<':
+					return LessThan(left, op, right)
+				elif op.value == '<=':
+					return LessThanEqual(left, op, right)
+				elif op.value == '>':
+					return GreaterThan(left, op, right)
+				elif op.value == '>=':
+					return GreaterThanEqual(left, op, right)
+				elif op.value == '==':
+					return EqualTo(left, op, right)
+				elif op.value == '!=':
+					return NotEqualTo(left, op, right)
+				else:
+					self.error(self.current_token)
 		
 		if self.current_token.type == CONDITIONALCOMBINATOR:
 			left = cond
@@ -90,11 +107,11 @@ class Parser:
 			self.error(self.current_token.type)
 
 	def loop(self):
-		#loop           : while LPARENT condition RPARENT body
+		#loop           : LOOP LPARENT condition RPARENT body
 		token = self.current_token
-		self.eat(WHILE)
+		self.eat(LOOP)
 		self.eat(LPARENT)
-		condition = self.confition()
+		condition = self.condition()
 		self.eat(RPARENT)
 		body = self.body()
 		return Loop(token, condition, body)
@@ -132,7 +149,7 @@ class Parser:
 	def term(self):
 		#term           : factor ((MUL|DIV|MOD) factor)+
 		node = self.factor()
-		while self.current_token in (MUL, DIV, MOD):
+		while self.current_token.type in (MUL, DIV, MOD):
 			token = self.current_token
 			if token.type == MUL:
 				self.eat(MUL)
@@ -156,13 +173,41 @@ class Parser:
 		return node
 	
 	def assignment(self):
-		#assignment     : IDENTIFIER = expression SEMICOLON
+		#assignment     : IDENTIFIER (ASSIGN|PLUSEQUALS|MINUSEQUALS|DIVEQUALS|MULEQUALS|MODEQUALS) expression SEMICOLON
 		left = self.identifier()
 		op = self.current_token
-		self.eat(ASSIGN)
-		right = self.expression()
-		self.eat(SEMICOLON)
-		return Assign(left, op, right)
+		if op.type == ASSIGN:
+			self.eat(ASSIGN)
+			right = self.expression()
+			self.eat(SEMICOLON)
+			return Assign(left, op, right)
+		elif op.type == PLUSEQUALS:
+			self.eat(PLUSEQUALS)
+			right = self.expression()
+			self.eat(SEMICOLON)
+			return PlusEquals(left, op, right)
+		elif op.type == MINUSEQUALS:
+			self.eat(MINUSEQUALS)
+			right = self.expression()
+			self.eat(SEMICOLON)
+			return MinusEquals(left, op, right)
+		elif op.type == DIVEQUALS:
+			self.eat(DIVEQUALS)
+			right = self.expression()
+			self.eat(SEMICOLON)
+			return DivEquals(left, op, right)
+		elif op.type == MULEQUALS:
+			self.eat(MULEQUALS)
+			right = self.expression()
+			self.eat(SEMICOLON)
+			return MulEquals(left, op, right)
+		elif op.type == MODEQUALS:
+			self.eat(MODEQALS)
+			right = self.expression()
+			self.eat(SEMICOLON)
+			return ModEquals(left, op, right)
+		else:
+			self.error(self.current_token)
 
 	def identifier(self):
 		#IDENTIFIER     : [_a-zA-Z][_a-zA-Z0-9] (indexer)+
@@ -176,9 +221,9 @@ class Parser:
 		return node
 
 	def indexer(self):
-		#indexer        : LBRACKET IDENTIFIER RBRACKET
+		#indexer        : LBRACKET factor RBRACKET
 		self.eat(LBRACE)
-		node = self.identifier()
+		node = self.factor()
 		self.eat(RBRACE)
 		return node
 

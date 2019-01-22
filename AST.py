@@ -30,7 +30,7 @@ class Assign(AST):
 class Var(AST):
 	def __init__(self, token, index):
 		self.token = token
-		self.value = token.value
+		self.var_name = token.value
 		self.index = index
 
 class Indexer(AST):
@@ -43,12 +43,6 @@ class Loop(AST):
 		self.token = token
 		self.condition = condition
 		self.body = body
-
-class Condition(AST):
-	def __init__(self, left, op, right):
-		self.left = left
-		self.token = self.op = op
-		self.right = right
 
 class If(AST):
 	def __init__(self, token, condition, body, else_node):
@@ -72,3 +66,63 @@ class Declarative(AST):
 		self.token = token
 		self.var = var
 		self.assigned = assigned
+
+class PlusEquals(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right
+
+class MinusEquals(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right
+
+class DivEquals(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right
+
+class MulEquals(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right
+
+class LessThan(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right
+	
+class LessThanEqual(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right
+
+class GreaterThan(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right
+
+class GreaterThanEqual(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right
+
+class EqualTo(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right
+
+class NotEqualTo(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right

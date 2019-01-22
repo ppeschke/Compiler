@@ -23,8 +23,13 @@ SEMICOLON = 'SEMICOLON'
 INCREMENTOR = 'INCREMENTOR'
 DECREMENTOR = 'DECREMENTOR'
 CONDITIONALCOMBINATOR = 'CONDITIONALCOMBINATOR'
-CONDITIONALOP = 'CONDITIONALOP'
 NEGATOR = 'NEGATOR'
+EVALOPERATOR = 'EVALOPERATOR'
+PLUSEQUALS = 'PLUSEQUALS'
+MINUSEQUALS = 'MINUSEQUALS'
+DIVEQUALS = 'DIVEQUALS'
+MULEQUALS = 'MULEQUALS'
+MODEQUALS = 'MODEQUALS'
 
 RESERVED_WORDS = {
 	'declare': DECLARE,
@@ -42,8 +47,8 @@ class Lexer:
 		self.line = 1
 		self.reserved_words = ['while', 'if', 'else', 'declare', 'output']
 
-	def error(self):
-		raise Exception('Error lexing input')
+	def error(self, message):
+		raise Exception('Error lexing input\n' + message)
 
 	def peek(self):
 		peek_pos = self.pos + 1
@@ -90,21 +95,15 @@ class Lexer:
 			if self.current_char.isalpha():
 				word = self.word()
 				if word in self.reserved_words:
-					t = Token(IDENTIFIER, word, self.line)
-					r = RESERVED_WORDS.get(word, t)
-					if r == t:
-						return t;
-					else:
-						return Token(r, word, self.line)
+					return Token(RESERVED_WORDS.get(word), word, self.line)
 				else:
-					t = Token(IDENTIFIER, word, self.line)
-					return t
+					return Token(IDENTIFIER, word, self.line)
 
 			if self.current_char == '=':
 				if self.peek() == '=':
 					self.advance()
 					self.advance()
-					return Token(CONDITIONALOP, '==')
+					return Token(EVALOPERATOR, '==', self.line)
 				else:
 					self.advance()
 					return Token(ASSIGN, '=', self.line)
@@ -114,17 +113,17 @@ class Lexer:
 					c = self.current_char
 					self.advance()
 					self.advance()
-					return Token(CONDITIONALOP, c + '=', self.line)
+					return Token(EVALOPERATOR, c + '=', self.line)
 				else:
 					c = self.current_char
 					self.advance()
-					return Token(CONDITIONALOP, c, self.line)
+					return Token(EVALOPERATOR, c, self.line)
 			
 			if self.current_char == '!':
 				if(self.peek() == '='):
 					self.advance()
 					self.advance()
-					return Token(CONDITIONALOP, '!=', self.line)
+					return Token(EVALOPERATOR, '!=', self.line)
 				else:
 					self.advance()
 					return Token(NEGATOR, '!', self.line)
@@ -134,6 +133,10 @@ class Lexer:
 					self.advance()
 					self.advance()
 					return Token(INCREMENTOR, '++', self.line)
+				elif self.peek() == '=':
+					self.advance()
+					self.advance()
+					return Token(PLUSEQUALS, '+=', self.line)
 				self.advance()
 				return Token(PLUS, '+', self.line)
 			
@@ -142,18 +145,34 @@ class Lexer:
 					self.advance()
 					self.advance()
 					return Token(DECREMENTOR, '--', self.line)
+				elif self.peek() == '=':
+					self.advance()
+					self.advance()
+					return Token(MINUSEQUALS, '-=', self.line)
 				self.advance()
 				return Token(MINUS, '-', self.line)
 			
 			if self.current_char == '/':
+				if self.peek() == '=':
+					self.advance()
+					self.advance()
+					return Token(DIVEQUALS, '/=', self.line)
 				self.advance()
 				return Token(DIV, '/', self.line)
 			
 			if self.current_char == '*':
+				if self.peek() == '=':
+					self.advance()
+					self.advance()
+					return Token(MULEQUALS, '*=', self.line)
 				self.advance()
 				return Token(MUL, '*', self.line)
 			
 			if self.current_char == '%':
+				if self.peek() == '=':
+					self.advance()
+					self.advance()
+					return Token(MODEQUALS, '%=', self.line)
 				self.advance()
 				return Token(MOD, '%', self.line)
 			
@@ -173,20 +192,28 @@ class Lexer:
 		
 			if self.current_char == '[':
 				self.advance()
-				return Token(LBRACKET, '[')
+				return Token(LBRACKET, '[', self.line)
 			
 			if self.current_char == ']':
 				self.advance()
-				return Token(RBRACKET, ']')
+				return Token(RBRACKET, ']', self.line)
 			
 			if self.current_char == '{':
 				self.advance()
-				return Token(LBRACE, '{')
+				return Token(LBRACE, '{', self.line)
 			
 			if self.current_char == '}':
 				self.advance()
-				return Token(RBRACE, '}')
+				return Token(RBRACE, '}', self.line)
 
-			self.error()
+			if self.current_char == '(':
+				self.advance()
+				return Token(LPARENT, '(', self.line)
+			
+			if self.current_char == ')':
+				self.advance()
+				return Token(RPARENT, ')', self.line)
+
+			self.error('Unrecognized character: ' + self.current_char + ' on ' + str(self.line))
 		
 		return Token(EOF, None, self.line)

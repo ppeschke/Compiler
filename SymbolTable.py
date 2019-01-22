@@ -1,6 +1,8 @@
+from collections import OrderedDict
+
 class SymbolTable:
 	def __init__(self):
-		self.tab = {}
+		self.tab = OrderedDict()
 
 	def declare(self, name):
 		if not self.is_declared(name):
@@ -14,7 +16,7 @@ class SymbolTable:
 		return self.tab[var_name]
 
 	def is_declared(self, var_name):
-		value = self.tab.get(var_name, None)
+		value = self.tab.get(var_name)
 		if value == None:
 			return False
 		return True
