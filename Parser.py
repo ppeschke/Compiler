@@ -81,26 +81,26 @@ class Parser:
 				op = self.evaloperator()
 				right = self.expression()
 				if op.value == '<':
-					return LessThan(left, op, right)
+					cond = LessThan(left, op, right)
 				elif op.value == '<=':
-					return LessThanEqual(left, op, right)
+					cond = LessThanEqual(left, op, right)
 				elif op.value == '>':
-					return GreaterThan(left, op, right)
+					cond = GreaterThan(left, op, right)
 				elif op.value == '>=':
-					return GreaterThanEqual(left, op, right)
+					cond = GreaterThanEqual(left, op, right)
 				elif op.value == '==':
-					return EqualTo(left, op, right)
+					cond = EqualTo(left, op, right)
 				elif op.value == '!=':
-					return NotEqualTo(left, op, right)
+					cond = NotEqualTo(left, op, right)
 				else:
-					self.error(self.current_token)
+					self.error(self.current_token.type)
 		
 		if self.current_token.type == CONDITIONALCOMBINATOR:
 			left = cond
 			op = self.current_token
 			self.eat(CONDITIONALCOMBINATOR)
 			right = self.condition()
-			return Condition(left, op, right)
+			return CompoundCondition(left, op, right)
 		elif self.current_token.type == RPARENT:
 			return cond
 		else:
@@ -243,7 +243,7 @@ class Parser:
 		return node
 
 	def statement(self):
-		#statement      : (declarative|assignment|loop|if|output|INCREMENTOR|DECREMENTOR)
+		#statement      : (declarative|assignment|loop|if|output|INCREMENTOR SEMICOLON|DECREMENTOR SEMICOLON)
 		if self.current_token.type == DECLARE:
 			node = self.declarative()
 		elif self.current_token.type == IDENTIFIER:

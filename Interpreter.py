@@ -123,3 +123,16 @@ class Interpreter(NodeVisitor):
 			self.visit(node.body)
 		elif node.else_node is not None:
 			self.visit(node.else_node)
+	
+	def visit_CompoundCondition(self, node):
+		left = self.visit(node.left)
+		if left:
+			if node.op.value == '||':
+				return True	#ignore right side because True or X will always be True
+			else:
+				return self.visit(node.right)
+		else:
+			if node.op.value == '&&':
+				return False	#ignore right side because False and X will always be False
+			else:
+				return self.visit(node.right)
