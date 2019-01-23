@@ -94,7 +94,7 @@ class Lexer:
 	
 	def word(self):
 		result = ''
-		while self.current_char is not None and self.current_char.isalnum():
+		while self.current_char is not None and (self.current_char.isalnum() or self.current_char == '_'):
 			result += self.current_char
 			self.advance()
 		return result
