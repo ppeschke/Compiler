@@ -91,6 +91,12 @@ class MulEquals(AST):
 		self.token = self.op = op
 		self.right = right
 
+class ModEquals(AST):
+	def __init__(self, left, op, right):
+		self.left = left
+		self.token = self.op = op
+		self.right = right
+
 class LessThan(AST):
 	def __init__(self, left, op, right):
 		self.left = left
