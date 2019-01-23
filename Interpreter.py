@@ -3,15 +3,7 @@ from Lexer import *
 from Parser import Parser
 from AST import AST
 from SymbolTable import SymbolTable
-
-class NodeVisitor(object):
-	def visit(self, node):
-		method_name = 'visit_' + type(node).__name__
-		visitor = getattr(self, method_name, self.generic_visit)
-		return visitor(node)
-	
-	def generic_visit(self, node):
-		raise Exception('No visit_{} method'.format(type(node).__name__))
+from NodeVisitor import NodeVisitor
 
 class Interpreter(NodeVisitor):
 	def __init__(self, parser):
