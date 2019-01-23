@@ -7,14 +7,14 @@ class Parser:
 		self.current_token = None
 		self.lexer = lexer
 	
-	def error(self, t):
-		raise Exception('Parser Error: Unexpected token {token_type}'.format(token_type=t))
+	def error(self, token):
+		raise Exception('Parser Error: Unexpected token {token_type} on line {line}'.format(token_type=token.type, line=token.line_number))
 
 	def eat(self, token_type):
 		if self.current_token.type == token_type:
 			self.current_token = self.lexer.get_next_token()
 		else:
-			self.error(self.current_token.type)
+			self.error(self.current_token)
 
 	def output(self):
 		#output         : out expression
@@ -67,16 +67,22 @@ class Parser:
 		return token
 
 	def condition(self):
-		#condition      : LPARENT condition RPARENT | expression | expression evaloperator expression | condition (AND | OR) condition
-		if self.current_token.type == LPARENT:
+		#condition      : NEGATOR condition | LPARENT condition RPARENT | expression | expression evaloperator expression | condition (AND | OR) condition
+		if self.current_token.type == NEGATOR:
+			token = self.current_token
+			self.eat(NEGATOR)
+			cond = self.condition()
+			return Negator(token, cond)
+		elif self.current_token.type == LPARENT:
 			self.eat(LPARENT)
 			cond = self.condition()
 			self.eat(RPARENT)
 		else:	#simple condition
 			left = self.expression()
 			if self.current_token.type == RPARENT or self.current_token.type == CONDITIONALCOMBINATOR:
-				op = Token(EVALOPERATOR, '!=')
-				right = Num(Token(INTEGER, 0))
+				op = Token(EVALOPERATOR, '!=', self.current_token.line_number)
+				right = Num(Token(INTEGER, 0, self.current_token.line_number))
+				cond = NotEqualTo(left, op, right)
 			else:
 				op = self.evaloperator()
 				right = self.expression()
@@ -93,7 +99,7 @@ class Parser:
 				elif op.value == '!=':
 					cond = NotEqualTo(left, op, right)
 				else:
-					self.error(self.current_token.type)
+					self.error(self.current_token)
 		
 		if self.current_token.type == CONDITIONALCOMBINATOR:
 			left = cond
@@ -104,7 +110,7 @@ class Parser:
 		elif self.current_token.type == RPARENT:
 			return cond
 		else:
-			self.error(self.current_token.type)
+			self.error(self.current_token)
 
 	def loop(self):
 		#loop           : LOOP LPARENT condition RPARENT body
@@ -213,7 +219,7 @@ class Parser:
 		#IDENTIFIER     : [_a-zA-Z][_a-zA-Z0-9] (indexer)+
 		token = self.current_token
 		self.eat(IDENTIFIER)
-		if self.current_token.type == LBRACE:
+		if self.current_token.type == LBRACKET:
 			index = self.indexer()
 		else:
 			index = None
@@ -221,14 +227,14 @@ class Parser:
 		return node
 
 	def indexer(self):
-		#indexer        : LBRACKET factor RBRACKET
-		self.eat(LBRACE)
-		node = self.factor()
-		self.eat(RBRACE)
+		#indexer        : LBRACKET expression RBRACKET
+		self.eat(LBRACKET)
+		node = self.expression()
+		self.eat(RBRACKET)
 		return node
 
 	def declarative(self):
-		#declarative    : DECLARE IDENTIFIER (ASSIGN exprpession) SEMICOLON
+		#declarative    : DECLARE IDENTIFIER (ASSIGN exprpession)+ SEMICOLON
 		decl_token = self.current_token
 		self.eat(DECLARE)
 		ident = self.identifier()
@@ -261,7 +267,7 @@ class Parser:
 			node = self.decrementor()
 			self.eat(SEMICOLON)
 		else:
-			self.error(self.current_token.type)
+			self.error(self.current_token)
 		
 		return node
 

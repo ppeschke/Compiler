@@ -37,14 +37,14 @@ class Interpreter(NodeVisitor):
 
 	def visit_UnaryOp(self, node):
 		op = node.op.type
-		var = node.identifier.value
+		var_name = node.identifier.var_name
 		value = self.visit(node.identifier)
 		if op == INCREMENTOR:
 			 value += 1
 		elif op == DECREMENTOR:
 			value -= 1
-		self.symtab.assign(var, value)
-		return var
+		self.symtab.assign(var_name, value)
+		return value
 
 	def visit_Compound(self, node):
 		for child in node.children:
@@ -52,16 +52,26 @@ class Interpreter(NodeVisitor):
 	
 	def visit_Assign(self, node):
 		var_name = node.left.var_name
+		if node.left.index is not None:
+			index = self.visit(node.left.index)
+		else:
+			index = None
 		value = self.visit(node.right)
-		self.symtab.assign(var_name, value)
+		self.symtab.assign(var_name, value, index)
 
 	def visit_Declarative(self, node):
-		self.symtab.declare(node.var.var_name)
-		if node.assigned is not None:
-			self.visit(node.assigned)
+		if node.var.index is not None:
+			self.symtab.declare_array(node.var.var_name, self.visit(node.var.index))
+		else:
+			self.symtab.declare(node.var.var_name)
+			if node.assigned is not None:
+				self.visit(node.assigned)
 	
 	def visit_Var(self, node):
-		return self.symtab.lookup(node.var_name)
+		if node.index is not None:
+			return self.symtab.lookup(node.var_name, self.visit(node.index))
+		else:
+			return self.symtab.lookup(node.var_name)
 
 	def visit_Output(self, node):
 		value = self.visit(node.expr)
@@ -136,3 +146,10 @@ class Interpreter(NodeVisitor):
 				return False	#ignore right side because False and X will always be False
 			else:
 				return self.visit(node.right)
+	
+	def visit_Negator(self, node):
+		right = self.visit(node.right)
+		return not right
+	
+	def visit_Else(self, node):
+		self.visit(node.after)

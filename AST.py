@@ -132,3 +132,8 @@ class CompoundCondition(AST):
 		self.left = left
 		self.token = self.op = op
 		self.right = right
+
+class Negator(AST):
+	def __init__(self, op, right):
+		self.token = self.op = op
+		self.right = right
