@@ -69,6 +69,21 @@ class Lexer:
 			if self.current_char == '\n':
 				self.line += 1
 			self.advance()
+	
+	def skip_single_line_comment(self):
+		while self.current_char is not None and self.current_char != '\n':
+			self.advance()
+		if self.current_char is not None:
+			self.line += 1;
+			self.advance()
+	
+	def skip_multi_line_comment(self):
+		while self.current_char is not None and not (self.current_char == '*' and self.peek() == '/'):
+			if self.current_char == '\n':
+				self.line += 1
+			self.advance()
+		self.advance()
+		self.advance()
 
 	def integer(self):
 		result = ''
@@ -86,8 +101,18 @@ class Lexer:
 	
 	def get_next_token(self):
 		while self.current_char is not None:
+			if self.current_char == '/':
+				if self.peek() == '/':
+					self.skip_single_line_comment()
+				elif self.peek() == '*':
+					self.advance()
+					self.advance()
+					self.skip_multi_line_comment()
+					continue
+			
 			if self.current_char.isspace():
 				self.skip_whitespace()
+				continue
 
 			if self.current_char.isdigit():
 				return Token(INTEGER, self.integer(), self.line)
