@@ -153,7 +153,7 @@ class Parser:
 			return self.decrementor()
 
 	def term(self):
-		#term           : factor ((MUL|DIV|MOD) factor)+
+		#term           : factor ((MUL|DIV|MOD) factor)*
 		node = self.factor()
 		while self.current_token.type in (MUL, DIV, MOD):
 			token = self.current_token
@@ -167,7 +167,7 @@ class Parser:
 		return node
 
 	def expression(self):
-		#expression     : term ((PLUS|MINUS)term)+
+		#expression     : term ((PLUS|MINUS)term)*
 		node = self.term()
 		while self.current_token.type in (PLUS, MINUS):
 			token = self.current_token
