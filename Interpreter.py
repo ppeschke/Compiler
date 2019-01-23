@@ -54,8 +54,6 @@ class Interpreter(NodeVisitor):
 		var_name = node.left.var_name
 		if node.left.index is not None:
 			index = self.visit(node.left.index)
-		else:
-			index = None
 		value = self.visit(node.right)
 		self.symtab.assign(var_name, value, index)
 

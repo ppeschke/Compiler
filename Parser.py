@@ -272,7 +272,7 @@ class Parser:
 		return node
 
 	def program(self):
-		#program        : statement (statement)*
+		#program        : (statement)*
 		self.current_token = self.lexer.get_next_token()
 		node = Compound()
 		while self.current_token.type != EOF:
