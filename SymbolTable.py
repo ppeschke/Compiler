@@ -28,13 +28,10 @@ class SymbolTable:
 		return var_name in self.tab
 	
 	def assign(self, name, value, index=None):
-		if index is not None:
-			if self.is_declared(name):
+		if self.is_declared(name):
+			if index is not None:
 				self.tab[name][index] = value
 			else:
-				raise Exception('Var {var_name} is not declared.'.format(var_name=name))
-		else:
-			if self.is_declared(name):
 				self.tab[name] = value
-			else:
-				raise Exception('Var {var_name} is not declared.'.format(var_name=name))
+		else:
+			raise Exception('Var {var_name} is not declared.'.format(var_name=name))
