@@ -13,6 +13,11 @@ def main():
 		lexer = Lexer(text)
 		parser = Parser(lexer)
 		codeGen = CodeGenerator(parser)
+		commands = codeGen.generate()
+		f = open('a.txt', 'w')
+		for command in commands:
+			f.write(str(command.data) + '\n')
+		f.close()
 
 if __name__ == '__main__':
 	main()

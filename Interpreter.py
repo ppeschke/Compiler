@@ -61,9 +61,9 @@ class Interpreter(NodeVisitor):
 	
 	def visit_Var(self, node):
 		if node.index is not None:
-			return self.symtab.lookup(node.var_name, self.visit(node.index))
+			return self.symtab.lookup(node.var_name, self.visit(node.index)).value
 		else:
-			return self.symtab.lookup(node.var_name)
+			return self.symtab.lookup(node.var_name).value
 
 	def visit_Output(self, node):
 		value = self.visit(node.expr)

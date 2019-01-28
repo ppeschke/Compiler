@@ -1,18 +1,22 @@
 from collections import OrderedDict
+from Var import Var
 
 class SymbolTable:
 	def __init__(self):
 		self.tab = OrderedDict()
+		self.address = 255
 
 	def declare(self, name):
 		if not self.is_declared(name):
-			self.tab[name] = 0
+			self.tab[name] = Var(self.address)
+			self.address -= 1
 		else:
 			raise Exception('Var {var_name} is already declared.'.format(var_name=name))
 	
 	def declare_array(self, name, length):
 		if not self.is_declared(name):
-			self.tab[name] = [0]*length
+			self.tab[name] = {[Var(self.address)]*length}
+			self.address -= length
 		else:
 			raise Exception('Var {var_name} is already declared.'.format(var_name=name))
 	
@@ -30,8 +34,8 @@ class SymbolTable:
 	def assign(self, name, value, index=None):
 		if self.is_declared(name):
 			if index is not None:
-				self.tab[name][index] = value
+				self.tab[name][index].value = value
 			else:
-				self.tab[name] = value
+				self.tab[name].value = value
 		else:
 			raise Exception('Var {var_name} is not declared.'.format(var_name=name))
