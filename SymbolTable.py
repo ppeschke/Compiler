@@ -27,6 +27,14 @@ class SymbolTable:
 			return self.tab[var_name][index]
 		else:
 			return self.tab[var_name]
+	
+	def lookup_address(self, var_name, index=None):
+		if not self.is_declared(var_name):
+			raise Exception('Variable: {name} not declared'.format(name=var_name));
+		if index is not None:
+			return self.tab[var_name][index].address - index
+		else:
+			return self.tab[var_name].address
 
 	def is_declared(self, var_name):
 		return var_name in self.tab
