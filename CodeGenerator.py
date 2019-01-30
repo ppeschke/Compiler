@@ -92,11 +92,19 @@ class CodeGenerator(NodeVisitor):
 			value = self.visit(node.left)
 			left_commands = [Command('LDI', 'instruction')]
 			left_commands.append(Command(value, 'data'))
+		elif type(node.left).__name__ == 'Var':
+			immediate = False
+			left_address = self.visit(node.left)
+			left_commands.append(Command('LDA', 'instruction'))
+			left_commands.extend(left_address)
 		else:
 			if not self.symtab.is_declared('binop_left'):
-				self.symtab.decalre('binop_left')
+				self.symtab.declare('binop_left')
 			left_address = self.symtab.lookup_address('binop_left')
 			left_setup = self.visit(node.left)
+			#do I really need to do this? Perhaps it will be caught by the optimizer
+			left_setup.append(Command('STO', 'instruction'))
+			left_setup.append(Command(left_address, 'address'))
 			left_commands.append(Command('LDA', 'instruction'))
 			left_commands.append(Command(left_address, 'variable'))
 
@@ -106,13 +114,17 @@ class CodeGenerator(NodeVisitor):
 			right_commands.append(Command(value, 'data'))
 		elif type(node.right).__name__ == 'Var':
 			immediate = False
-			if not self.symtab.is_declared('binop_right'):
-				self.symtab.declare('binop_right')
-			right_address = self.symtab.lookup_address('binop_right')
+			right_address = self.visit(node.right)
 			right_commands.append(Command(right_address, 'variable'))
 		else:
 			immediate = False
 			right_setup = self.visit(node.right)
+			if not self.symtab.is_declared('binop_right'):
+				self.symtab.declare('binop_right')
+			right_address = self.symtab.lookup_address('binop_right')
+			right_setup.append(Command('STO', 'instruction'))
+			right_setup.append(Command(right_address, 'address'))
+			right_commands.append(Command(right_address, 'address'))
 			
 		if node.op.value == '+':
 			if immediate:
