@@ -104,6 +104,7 @@ class Lexer:
 			if self.current_char == '/':
 				if self.peek() == '/':
 					self.skip_single_line_comment()
+					continue
 				elif self.peek() == '*':
 					self.advance()
 					self.advance()

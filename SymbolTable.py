@@ -35,7 +35,7 @@ class SymbolTable:
 		if not self.is_declared(var_name):
 			raise Exception('Variable: {name} not declared'.format(name=var_name));
 		if index is not None:
-			return self.tab[var_name][index].address - index
+			return self.tab[var_name][index].address
 		else:
 			return self.tab[var_name].address
 
