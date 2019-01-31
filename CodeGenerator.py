@@ -18,12 +18,16 @@ class CodeGenerator(NodeVisitor):
 		return commands
 	
 	def visit_Compound(self, node):
-		commands = []
+		child_commands = []
+		length = 0
 		for c in node.children:
-			com = self.visit(c)
-			if com != []:
-				commands.extend(com)
-		return commands
+			commands = self.visit(c)
+			length = len(child_commands)
+			for command in commands:
+				if command.data_type == 'dynamic':
+					command.data += length;
+			child_commands.extend(commands)
+		return child_commands
 		
 	def visit_Declarative(self, node):
 		commands = []
@@ -36,30 +40,81 @@ class CodeGenerator(NodeVisitor):
 		return commands
 	
 	def visit_Assign(self, node):
+		#this could be an address or
+		# instructions to calculate an address
 		var_address = self.visit(node.left)
-		if type(node.right).__name__ == 'Num':
-			value = self.visit(node.right)
-			commands = [Command('LDI', 'instruction')]
-			commands.append(Command(value, 'data'))
-			commands.append(Command('STO', 'instruction'))
-			commands.extend(var_address)
+
+		if len(var_address) == 1:
+			#not an array
+			if type(node.right).__name__ == 'Num':
+				#store number in variable
+				value = self.visit(node.right)
+				commands = [Command('LDI', 'instruction')]
+				commands.append(Command(value, 'data'))
+				commands.append(Command('STO', 'instruction'))
+				commands.extend(var_address)
+			else:
+				#store expression result in variable
+				commands = self.visit(node.right)
+				commands.append(Command('STO', 'instruction'))
+				commands.extend(var_address)
 		else:
-			commands = self.visit(node.right)
-			commands.append(Command('STO', 'instruction'))
-			commands.extend(var_address)
+			#dealing with an array
+			if type(node.right).__name__ == 'Num':
+				#store number in array spot
+				value = self.visit(node.right)
+				length = len(var_address) + 4
+				commands = var_address
+				commands.append(Command('STO', 'instruction'))
+				commands.append(Command(length + 1, 'dynamic'))
+				commands.append(Command('LDI', 'instruction'))
+				commands.append(Command(value, 'data'))
+				commands.append(Command('STO', 'instruction'))
+				commands.append(Command('0', 'dynamically filled'))
+			elif type(node.right).__name__ == 'Var':
+				#store var in array spot
+				length = len(var_address) + 4
+				right_var_address = self.visit(node.right)
+				commands = var_address
+				commands.append(Command('STO', 'instruction'))
+				commands.append(Command(length + 1, 'dynamic'))
+				commands.append(Command('LDA', 'instruction'))
+				commands.extend(right_var_address)
+				commands.append(Command('STO', 'instruction'))
+				commands.append(Command(0, 'dynamically filled'))
+			else:
+				#store expression result in array spot
+				length = len(var_address) + 2
+				right_commands = self.visit(node.right)
+				right_length = len(right_commands)
+				commands = var_address
+				commands.append(Command('STO', 'instruction'))
+				commands.append(Command(length + right_length + 1, 'dynamic'))
+				commands.extend(right_commands)
+				commands.append(Command('STO', 'instruction'))
+				commands.append(Command(0, 'dynamically filled'))
+
 		return commands
 	
 	def visit_Var(self, node):
 		if node.index is not None:
+			#with index
 			if type(node.index).__name__ == 'Num':
+				#with numeric index
 				index = self.visit(node.index)
 				address = self.symtab.lookup_address(node.var_name, index)
 				return [Command(address, 'address')]
 			else:
-				commands = self.visit(node.index)
-				var_address = self.symtab.lookup(node.var_name, 0)
-				commands.append(Command('STO', 'instruction'))
-				commands.append(Command(4, 'variable'))
+				if type(node.index).__name__ == 'Var':
+					#with variable index
+					commands = [Command('LDA', 'instruction')]
+					commands.extend(self.visit(node.index))
+				else:
+					#with expression index
+					commands = self.visit(node.index)
+				var_address = self.symtab.lookup_address(node.var_name, 0)
+				commands.append(Command('ADI', 'instruction'))
+				commands.append(Command(var_address, 'address'))
 				return commands
 		else:
 			commands = [Command(self.symtab.lookup(node.var_name).address, 'variable')]
@@ -81,7 +136,7 @@ class CodeGenerator(NodeVisitor):
 			commands.append(Command('OUT', 'instruction'))
 		else:
 			commands = self.visit(node.expr)
-			commands.append('OUT', 'instruction')
+			commands.append(Command('OUT', 'instruction'))
 		return commands
 	
 	def visit_BinOp(self, node):
@@ -117,7 +172,7 @@ class CodeGenerator(NodeVisitor):
 		elif type(node.right).__name__ == 'Var':
 			immediate = False
 			right_address = self.visit(node.right)
-			right_commands.append(Command(right_address, 'variable'))
+			right_commands.extend(right_address)
 		else:
 			immediate = False
 			right_setup = self.visit(node.right)
