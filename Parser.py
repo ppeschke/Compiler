@@ -232,19 +232,35 @@ class Parser:
 		node = self.expression()
 		self.eat(RBRACKET)
 		return node
+	
+	def declareIdentifier(self):
+		#[_a-zA-Z][_a-zA-Z0-9] LBRACKET [0-9] RBRACKET
+		token = self.current_token
+		self.eat(IDENTIFIER)
+		if self.current_token.type == LBRACKET:
+			self.eat(LBRACKET)
+			index = Num(self.current_token)
+			self.eat(INTEGER)
+			self.eat(RBRACKET)
+		else:
+			index = None
+		node = Var(token, index)
+		return node
 
 	def declarative(self):
-		#declarative    : DECLARE IDENTIFIER (ASSIGN exprpession)+ SEMICOLON
+		#declarative    : DECLARE [declareIdentifier | identifier (ASSIGN expression)+] SEMICOLON
 		decl_token = self.current_token
 		self.eat(DECLARE)
-		ident = self.identifier()
+		ident = self.declareIdentifier()
 		assigned = None
-		if self.current_token.type == ASSIGN:
+		if ident.index is not None or self.current_token.type == SEMICOLON:
+			self.eat(SEMICOLON)
+		elif self.current_token.type == ASSIGN:
 			assign_token = self.current_token
 			self.eat(ASSIGN)
 			right = self.expression()
 			assigned = Assign(ident, assign_token, right)
-		self.eat(SEMICOLON)
+			self.eat(SEMICOLON);
 		node = Declarative(decl_token, ident, assigned)
 		return node
 
