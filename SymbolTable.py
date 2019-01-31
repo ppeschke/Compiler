@@ -16,9 +16,10 @@ class SymbolTable:
 	def declare_array(self, name, length):
 		if not self.is_declared(name):
 			self.tab[name] = []
+			self.address -= (length - 1)
 			for count in range(0, length):
-			 self.tab[name].append(Var(self.address+count))
-			self.address -= length
+				self.tab[name].append(Var(self.address+count))
+			self.address -= 1
 		else:
 			raise Exception('Var {var_name} is already declared.'.format(var_name=name))
 	

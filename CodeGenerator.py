@@ -28,7 +28,7 @@ class CodeGenerator(NodeVisitor):
 	def visit_Declarative(self, node):
 		commands = []
 		if node.var.index is not None:
-			self.symtab.declare(node.var.var_name, self.visit(node.var.index))
+			self.symtab.declare_array(node.var.var_name, self.visit(node.var.index))
 		else:
 			self.symtab.declare(node.var.var_name)
 			if node.assigned is not None:
@@ -52,7 +52,9 @@ class CodeGenerator(NodeVisitor):
 	def visit_Var(self, node):
 		if node.index is not None:
 			if type(node.index).__name__ == 'Num':
-				return [Command(self.visit(node.index), 'data')]
+				index = self.visit(node.index)
+				address = self.symtab.lookup_address(node.var_name, index)
+				return [Command(address, 'address')]
 			else:
 				commands = self.visit(node.index)
 				var_address = self.symtab.lookup(node.var_name, 0)
