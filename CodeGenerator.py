@@ -25,7 +25,7 @@ class CodeGenerator(NodeVisitor):
 			length = len(child_commands)
 			for command in commands:
 				if command.data_type == 'dynamic':
-					command.data += length;
+					command.data += length
 			child_commands.extend(commands)
 		return child_commands
 		
@@ -213,3 +213,23 @@ class CodeGenerator(NodeVisitor):
 		commands.extend(operations)
 		commands.extend(right_commands)
 		return commands
+	
+	def visit_Loop(self, node):
+		commands = self.visit(node.condition)
+		length = len(commands)
+		commands.extend(self.visit(node.body))
+		commands.append(Command('JMP', 'instruction'))
+		commands.append(Command(0, 'dynamic'))
+		full_length = len(commands)
+		for command in commands:
+			if command.data_type == 'dynamic':
+				command.data += length
+			elif command.data_type == 'after loop':
+				command.data = full_length
+				command.data_type = 'dynamic'
+		return commands
+	
+	# def visit_LessThan(self, node):
+	# 	commands = [Command('JMP', 'instruction')]
+	# 	commands.append(Command(0, 'after loop'))
+	# 	return commands
