@@ -128,15 +128,20 @@ class CodeGenerator(NodeVisitor):
 			value = self.visit(node.expr)
 			commands = [Command('LDI', 'instruction')]
 			commands.append(Command(value, 'data'))
-			commands.append(Command('OUT', 'instruction'))
 		elif type(node.expr).__name__ == 'Var':
 			address = self.visit(node.expr)
-			commands = [Command('LDA', 'instruction')]
-			commands.extend(address)
-			commands.append(Command('OUT', 'instruction'))
+			if len(address) == 1:
+				commands = [Command('LDA', 'instruction')]
+				commands.extend(address)
+			else:
+				commands = address
+				commands.append(Command('STO', 'instruction'))
+				commands.append(Command(len(address) + 2, 'dynamic'))
+				commands.append(Command('LDI', 'instruction'))
+				commands.append(Command(0, 'dynamically filled'))
 		else:
 			commands = self.visit(node.expr)
-			commands.append(Command('OUT', 'instruction'))
+		commands.append(Command('OUT', 'instruction'))
 		return commands
 	
 	def visit_BinOp(self, node):
