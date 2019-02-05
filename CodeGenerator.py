@@ -224,6 +224,9 @@ class CodeGenerator(NodeVisitor):
 		for command in commands:
 			if command.data_type == 'dynamic':
 				command.data += length
+			elif command.data_type == 'body':
+				command.data = length
+				command.data_type = 'dynamic'
 			elif command.data_type == 'after':
 				command.data = full_length
 				command.data_type = 'dynamic'
@@ -460,5 +463,125 @@ class CodeGenerator(NodeVisitor):
 		commands.append(Command('JZ', 'instruction'))
 		commands.append(Command(0, 'next'))
 		commands.append(Command('JMP', 'instruction'))
+		commands.append(Command(0, 'after'))
+		return commands
+	
+	def visit_GreaterThanEqual(self, node):
+		left_setup = []
+		left_commands = []
+		right_setup = []
+		right_commands = []
+		operations = []
+		if type(node.left).__name__ == 'Num':
+			immediate = True;
+			value = self.visit(node.left)
+			left_commands.append(Command(value, 'data'))
+		elif type(node.left).__name__ == 'Var':
+			immediate = False
+			left_address = self.visit(node.left)
+			left_commands.extend(left_address)
+		else:
+			immediate = False
+			if not self.symtab.is_declared('compare_left'):
+				self.symtab.declare('compare_left')
+			left_address = self.symtab.lookup_address('compare_left')
+			left_setup = self.visit(node.left)
+			#do I really need to do this? Perhaps it will be caught by the optimizer
+			left_setup.append(Command('STO', 'instruction'))
+			left_setup.append(Command(left_address, 'address'))
+			left_commands.append(Command('LDA', 'instruction'))
+			left_commands.append(Command(left_address, 'variable'))
+
+		if type(node.right).__name__ == 'Num':
+			value = self.visit(node.right)
+			right_commands = [Command('LDI', 'instruction')]
+			right_commands.append(Command(value, 'data'))
+		elif type(node.right).__name__ == 'Var':
+			right_address = self.visit(node.right)
+			right_commands.append(Command('LDA', 'instruction'))
+			right_commands.extend(right_address)
+		else:
+			right_setup = self.visit(node.right)
+			if not self.symtab.is_declared('compare_right'):
+				self.symtab.declare('compare_right')
+			right_address = self.symtab.lookup_address('compare_right')
+			right_setup.append(Command('STO', 'instruction'))
+			right_setup.append(Command(right_address, 'address'))
+			right_commands.append(Command(right_address, 'address'))
+		
+		if immediate:
+			operations.append(Command('SBI', 'instruction'))
+		else:
+			operations.append(Command('SUB', 'instruction'))
+		
+		commands = right_setup
+		commands.extend(left_setup)
+		commands.extend(right_commands)
+		commands.extend(operations)
+		commands.extend(left_commands)
+		commands.append(Command('JZ', 'instruction'))
+		length = len(commands)
+		commands.append(Command(length + 3, 'body'))
+		commands.append(Command('JC', 'instruction'))
+		commands.append(Command(0, 'after'))
+		return commands
+	
+	def visit_LessThanEqual(self, node):
+		left_setup = []
+		left_commands = []
+		right_setup = []
+		right_commands = []
+		operations = []
+		if type(node.left).__name__ == 'Num':
+			value = self.visit(node.left)
+			left_commands = [Command('LDI', 'instruction')]
+			left_commands.append(Command(value, 'data'))
+		elif type(node.left).__name__ == 'Var':
+			immediate = False
+			left_address = self.visit(node.left)
+			left_commands.append(Command('LDA', 'instruction'))
+			left_commands.extend(left_address)
+		else:
+			if not self.symtab.is_declared('compare_left'):
+				self.symtab.declare('compare_left')
+			left_address = self.symtab.lookup_address('compare_left')
+			left_setup = self.visit(node.left)
+			#do I really need to do this? Perhaps it will be caught by the optimizer
+			left_setup.append(Command('STO', 'instruction'))
+			left_setup.append(Command(left_address, 'address'))
+			left_commands.append(Command('LDA', 'instruction'))
+			left_commands.append(Command(left_address, 'variable'))
+
+		if type(node.right).__name__ == 'Num':
+			immediate = True;
+			value = self.visit(node.right)
+			right_commands.append(Command(value, 'data'))
+		elif type(node.right).__name__ == 'Var':
+			immediate = False
+			right_address = self.visit(node.right)
+			right_commands.extend(right_address)
+		else:
+			immediate = False
+			right_setup = self.visit(node.right)
+			if not self.symtab.is_declared('compare_right'):
+				self.symtab.declare('compare_right')
+			right_address = self.symtab.lookup_address('compare_right')
+			right_setup.append(Command('STO', 'instruction'))
+			right_setup.append(Command(right_address, 'address'))
+			right_commands.append(Command(right_address, 'address'))
+		
+		if immediate:
+			operations.append(Command('SBI', 'instruction'))
+		else:
+			operations.append(Command('SUB', 'instruction'))
+		
+		commands = left_setup
+		commands.extend(right_setup)
+		commands.extend(left_commands)
+		commands.extend(operations)
+		commands.extend(right_commands)
+		commands.append(Command('JZ', 'instruction'))
+		commands.append(Command(0, 'body'))
+		commands.append(Command('JC', 'instruction'))
 		commands.append(Command(0, 'after'))
 		return commands
