@@ -35,11 +35,11 @@ class Parser:
 		return Else(token, after)
 
 	def doif(self):
-		#if             : IF LPARENT condition RPARENT body else*
+		#if             : IF LPARENT conditionalexpression RPARENT body else*
 		token = self.current_token
 		self.eat(IF)
 		self.eat(LPARENT)
-		cond = self.condition()
+		cond = self.conditionalexpression()
 		self.eat(RPARENT)
 		bod = self.body()
 		else_node = None
@@ -65,19 +65,19 @@ class Parser:
 		token = self.current_token
 		self.eat(EVALOPERATOR)
 		return token
-
-	def condition(self):
-		#condition      : NEGATOR condition | LPARENT condition RPARENT | expression | expression evaloperator expression | condition (AND | OR) condition
+	
+	def conditionalfactor(self):
+		#conditionalfactor    : NEGATOR conditionalexpression | LPARENT conditionalexpression RPARENT | expression (evaloperator expression)?
 		if self.current_token.type == NEGATOR:
 			token = self.current_token
 			self.eat(NEGATOR)
-			cond = self.condition()
+			cond = self.conditionalexpression()
 			return Negator(token, cond)
 		elif self.current_token.type == LPARENT:
 			self.eat(LPARENT)
-			cond = self.condition()
+			cond = self.conditionalexpression()
 			self.eat(RPARENT)
-		else:	#simple condition
+		else:
 			left = self.expression()
 			if self.current_token.type == RPARENT or self.current_token.type == CONDITIONALCOMBINATOR:
 				op = Token(EVALOPERATOR, '!=', self.current_token.line_number)
@@ -100,24 +100,37 @@ class Parser:
 					cond = NotEqualTo(left, op, right)
 				else:
 					self.error(self.current_token)
-		
-		if self.current_token.type == CONDITIONALCOMBINATOR:
-			left = cond
-			op = self.current_token
+		return cond
+
+
+	def conditionalterm(self):
+		#conditionalterm      : conditionalfactor (AND conditionalfactor)+
+		left = self.conditionalfactor()
+		if self.current_token.type == CONDITIONALCOMBINATOR and self.current_token.value == '&&':
+			token = self.current_token
 			self.eat(CONDITIONALCOMBINATOR)
-			right = self.condition()
-			return CompoundCondition(left, op, right)
-		elif self.current_token.type == RPARENT:
-			return cond
+			right = self.conditionalfactor()
+			return CompoundCondition(left, token, right)
 		else:
-			self.error(self.current_token)
+			return left
+
+	def conditionalexpression(self):
+		#conditionalexpression: conditionalterm (OR conditionalterm)+
+		cond = self.conditionalterm()
+		if self.current_token.type == CONDITIONALCOMBINATOR and self.current_token.value == '||':
+			token = self.current_token
+			self.eat(CONDITIONALCOMBINATOR)
+			right = self.conditionalterm()
+			return CompoundCondition(cond, token, right)
+		else:
+			return cond
 
 	def loop(self):
-		#loop           : LOOP LPARENT condition RPARENT body
+		#loop           : LOOP LPARENT conditionalexpression RPARENT body
 		token = self.current_token
 		self.eat(LOOP)
 		self.eat(LPARENT)
-		condition = self.condition()
+		condition = self.conditionalexpression()
 		self.eat(RPARENT)
 		body = self.body()
 		return Loop(token, condition, body)
