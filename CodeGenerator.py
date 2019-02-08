@@ -216,16 +216,18 @@ class CodeGenerator(NodeVisitor):
 	
 	def visit_Loop(self, node):
 		commands = self.visit(node.condition)
-		length = len(commands)
+		condition_length = len(commands)
 		commands.extend(self.visit(node.body))
 		commands.append(Command('JMP', 'instruction'))
 		commands.append(Command(0, 'data'))	# we'll change the type later
 		full_length = len(commands)
 		for command in commands:
-			if command.data_type == 'dynamic':
-				command.data += length
+			if command.data_type == 'skip_once':
+				command.data_type = 'dynamic'
+			elif command.data_type == 'dynamic':
+				command.data += condition_length
 			elif command.data_type == 'body':
-				command.data = length
+				command.data = condition_length
 				command.data_type = 'dynamic'
 			elif command.data_type == 'after':
 				command.data = full_length
@@ -461,7 +463,7 @@ class CodeGenerator(NodeVisitor):
 		commands.extend(operations)
 		commands.extend(right_commands)
 		commands.append(Command('JZ', 'instruction'))
-		commands.append(Command(0, 'next'))
+		commands.append(Command(0, 'body'))
 		commands.append(Command('JMP', 'instruction'))
 		commands.append(Command(0, 'after'))
 		return commands
@@ -524,6 +526,8 @@ class CodeGenerator(NodeVisitor):
 		commands.append(Command(length + 3, 'body'))
 		commands.append(Command('JC', 'instruction'))
 		commands.append(Command(0, 'after'))
+		commands.append(Command('JMP', 'instruction'))
+		commands.append(Command(0, 'body'))
 		return commands
 	
 	def visit_LessThanEqual(self, node):
@@ -584,4 +588,64 @@ class CodeGenerator(NodeVisitor):
 		commands.append(Command(0, 'body'))
 		commands.append(Command('JC', 'instruction'))
 		commands.append(Command(0, 'after'))
+		commands.append(Command('JMP', 'instruction'))
+		commands.append(Command(0, 'body'))
+		return commands
+	
+	def visit_CompoundCondition(self, node):
+		left_commands =  self.visit(node.left)
+		right_commands = self.visit(node.right)
+		left_length = len(left_commands)
+		right_length = len(right_commands)
+		commands = []
+		if node.op.value == '&&':
+			#process and condition
+			for command in left_commands:
+				if command.data_type == 'body':
+					command.data = left_length
+					command.data_type = 'skip_once'
+
+			for command in right_commands:
+				if command.data_type == 'body':
+					command.data = left_length + right_length
+					command.data_type = 'skip_once'
+
+			commands.extend(left_commands)
+			commands.extend(right_commands)
+		else:
+			#process or condition
+			for command in left_commands:
+				if command.data_type == 'body':
+					command.data += left_length + right_length
+					command.data_type = 'skip_once'
+				elif command.data_type == 'after':
+					command.data = left_length
+					command.data_type = 'skip_once'
+
+			for command in right_commands:
+				if command.data_type == 'body':
+					command.data += left_length + right_length
+					command.data_type = 'skip_once'
+
+			commands.extend(left_commands)
+			commands.extend(right_commands)
+
+		return commands
+	
+	def visit_If(self, node):
+		commands = self.visit(node.condition)
+		length = len(commands)
+		commands.extend(self.visit(node.body))
+		full_length = len(commands)
+		for command in commands:
+			if command.data_type == 'skip_once':
+				command.data_type = 'dynamic'
+			elif command.data_type == 'dynamic':
+				command.data += length
+			elif command.data_type == 'body':
+				command.data = length
+				command.data_type = 'dynamic'
+			elif command.data_type == 'after':
+				command.data = full_length
+				command.data_type = 'dynamic'
 		return commands
