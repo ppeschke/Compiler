@@ -649,3 +649,35 @@ class CodeGenerator(NodeVisitor):
 				command.data = full_length
 				command.data_type = 'dynamic'
 		return commands
+	
+	def visit_UnaryOp(self, node):
+		commands = []
+		operations = []
+		var_address = self.visit(node.identifier)
+		if node.op.value == '++':
+			operations.append(Command('ADI', 'instruction'))
+		else:
+			operations.append(Command('SBI', 'instruction'))
+		operations.append(Command(1, 'data'))
+		if len(var_address) == 1:
+			#not a variable indexed array
+			commands.append(Command('LDA', 'instruction'))
+			commands.extend(var_address)
+			commands.extend(operations)
+			commands.append(Command('STO', 'instruction'))
+			commands.extend(var_address)
+		else:
+			#variable indexed array
+			commands.extend(var_address)
+			length = len(var_address) + 2
+			commands.append(Command('STO', 'instruction'))
+			commands.append(Command(length + 3, 'dynamic'))
+			commands.append(Command('STO', 'instruction'))
+			commands.append(Command(length + 7, 'dynamic'))
+			commands.append(Command('LDA', 'instruction'))
+			commands.append(Command(0, 'dynamically filled'))
+			commands.extend(operations)
+			commands.append(Command('STO', 'instruction'))
+			commands.append(Command('0', 'dynamically filled'))
+
+		return commands
